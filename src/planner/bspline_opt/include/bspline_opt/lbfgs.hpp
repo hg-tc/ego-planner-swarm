@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
-
+#include "bspline_opt/quant.hpp"
 namespace lbfgs
 {
     // ----------------------- Data Type Part -----------------------
@@ -285,6 +285,16 @@ namespace lbfgs
         double *s; /* [n] */
         double *y; /* [n] */
         double ys; /* vecdot(y, s) */
+
+        // quant use
+        double s_scale=1;
+        double y_scale=1;
+        double yy_scale=1;
+        double ys_scale=1;
+        double alpha_scale=1;
+        double beta_scale=1;
+        double a_b_scale=1;
+
     };
 
     // ----------------------- Arithmetic Part -----------------------
@@ -1120,6 +1130,13 @@ namespace lbfgs
             it->ys = 0;
             it->s = (double *)vecalloc(n * sizeof(double));
             it->y = (double *)vecalloc(n * sizeof(double));
+            it->s_scale = get_scale(x,n)/64;
+            it->y_scale = it->s_scale;
+            it->ys_scale = it->y_scale * it->y_scale ;
+            it->yy_scale = 8;
+            it->alpha_scale = it->ys_scale;
+            it->beta_scale = it->ys_scale;
+            it->a_b_scale = it->ys_scale;
         }
 
         /* Allocate an array for storing previous values of the objective function. */
@@ -1166,8 +1183,22 @@ namespace lbfgs
             end = 0;
             loop = 1;
 
+            // define quant scale
+            double x_scale = 1;
+            double g_scale = 1;
+            double d_scale = 1;
+            double xnorm_scale = 1;
+            double gnorm_scale = 1;
+            //
+            x_scale = get_scale(x,n);
+            g_scale = get_scale(g,n);
+            d_scale = g_scale;
+            xnorm_scale = x_scale * 64;
+            gnorm_scale = g_scale * 64;
             while (loop == 1)
             {
+                
+                
                 /* Store the current position and gradient vectors. */
                 veccpy(xp, x, n);
                 veccpy(gp, g, n);
@@ -1185,6 +1216,10 @@ namespace lbfgs
 
                 /* Search for an optimal step. */
                 ls = line_search_morethuente(n, x, &fx, g, d, &step, xp, gp, &step_min, &step_max, &cd, &param);
+                x = quantize_fix(x, n, x_scale, 16);
+                g = quantize_fix(g, n, g_scale, 16);
+                x_scale = get_scale(x,n);
+                g_scale = get_scale(g,n);
 
                 if (ls < 0)
                 {
@@ -1199,6 +1234,11 @@ namespace lbfgs
                 /* Compute x and g norms. */
                 vec2norm(&xnorm, x, n);
                 vec2norm(&gnorm, g, n);
+
+                xnorm = quantize_fix(xnorm, xnorm_scale, 16);
+                gnorm = quantize_fix(gnorm, gnorm_scale, 16);
+                xnorm_scale = get_scale(xnorm);
+                gnorm_scale = get_scale(gnorm);
 
                 // /* Report the progress. */
                 // if (cd.proc_progress)
@@ -1264,7 +1304,13 @@ namespace lbfgs
                 it = &lm[end];
                 vecdiff(it->s, x, xp, n);
                 vecdiff(it->y, g, gp, n);
-
+                
+                // quant change.1
+                it->s = quantize_fix(it->s, n, it->s_scale, 16);
+                it->y = quantize_fix(it->y, n, it->y_scale, 16);
+                //
+                it->s_scale = get_scale(it->s, n);
+                it->y_scale = get_scale(it->y, n);
                 /*
                 Compute scalars ys and yy:
                 ys = y^t \cdot s = 1 / \rho.
@@ -1275,6 +1321,11 @@ namespace lbfgs
                 vecdot(&yy, it->y, it->y, n);
                 it->ys = ys;
 
+                yy = quantize_fix(yy, it->yy_scale, 16);
+                it->ys = quantize_fix(ys, it->ys_scale, 16);
+                it->ys_scale = get_scale(ys);
+                it->yy_scale = get_scale(yy);
+                
                 /*
                 Recursive formula to compute dir = -(H \cdot g).
                 This is described in page 779 of:
@@ -1297,24 +1348,50 @@ namespace lbfgs
                     it = &lm[j];
                     /* \alpha_{j} = \rho_{j} s^{t}_{j} \cdot q_{k+1}. */
                     vecdot(&it->alpha, it->s, d, n);
+                    // quant change
+                    // it->alpha = quantize_fix(it->alpha, it->alpha_scale*it->ys_scale, 16);
+                    //
                     it->alpha /= it->ys;
+                    // quant change
+                    // it->alpha = quantize_fix(it->alpha, it->alpha_scale, 16);
+                    // it->alpha_scale = get_scale(it->alpha);
+                    //
+
                     /* q_{i} = q_{i+1} - \alpha_{i} y_{i}. */
                     vecadd(d, it->y, -it->alpha, n);
+                    // quant change
+                    // d = quantize_fix(d, n, d_scale, 16);
+                    //
                 }
-
+                double ys_yy = ys/yy;
+                // ys_yy = quantize_fix(ys_yy, it->ys_scale/it->yy_scale, 16);
                 vecscale(d, ys / yy, n);
-
+                // d = quantize_fix(d, n, d_scale, 16);
                 for (i = 0; i < bound; ++i)
                 {
                     it = &lm[j];
                     /* \beta_{j} = \rho_{j} y^t_{j} \cdot \gamm_{i}. */
                     vecdot(&beta, it->y, d, n);
+                    // quant change
+                    // beta = quantize_fix(beta, it->beta_scale*it->ys_scale, 16);
+                    //
                     beta /= it->ys;
+                    // quant change
+                    // beta = quantize_fix(beta, it->beta_scale, 16);
+                    // it->beta_scale = get_scale(beta);
+                    //
+                    double a_b = it->alpha - beta;
+                    // a_b = quantize_fix(a_b, it->a_b_scale, 16);
+                    // it->a_b_scale = get_scale(a_b);
                     /* \gamm_{i+1} = \gamm_{i} + (\alpha_{j} - \beta_{j}) s_{j}. */
-                    vecadd(d, it->s, it->alpha - beta, n);
+                    vecadd(d, it->s, a_b, n);
+                    // quant change
+                    // d = quantize_fix(d, n, d_scale, 16);
+                    //
                     j = (j + 1) % m; /* if (++j == m) j = 0; */
                 }
-
+                
+                d_scale = get_scale(d,n);
                 /*
                 Now the search direction d is ready. We try step = 1 first.
                 */
