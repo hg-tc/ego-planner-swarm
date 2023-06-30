@@ -294,7 +294,8 @@ namespace lbfgs
         double alpha_scale=1;
         double beta_scale=1;
         double a_b_scale=1;
-
+        double d_temp_scale=1;
+        double d_temp2_scale=1/1024;
     };
 
     // ----------------------- Arithmetic Part -----------------------
@@ -1041,7 +1042,7 @@ namespace lbfgs
                               lbfgs_parameter_t *_param)
     {
         int ret;
-        int i, j, k, ls, end, bound;
+        int i, j, k, ls, before, end, bound;
         double step;
         int loop;
         double step_min, step_max;
@@ -1134,9 +1135,11 @@ namespace lbfgs
             it->y_scale = it->s_scale;
             it->ys_scale = it->y_scale * it->y_scale ;
             it->yy_scale = 8;
-            it->alpha_scale = it->ys_scale;
-            it->beta_scale = it->ys_scale;
+            it->alpha_scale = 1;
+            it->beta_scale = 1;
             it->a_b_scale = it->ys_scale;
+            it->d_temp_scale = it->s_scale;
+            it->d_temp2_scale = it->s_scale;
         }
 
         /* Allocate an array for storing previous values of the objective function. */
@@ -1189,6 +1192,7 @@ namespace lbfgs
             double d_scale = 1;
             double xnorm_scale = 1;
             double gnorm_scale = 1;
+            double ys_yy_scale = 1;
             //
             x_scale = get_scale(x,n);
             g_scale = get_scale(g,n);
@@ -1198,7 +1202,7 @@ namespace lbfgs
             while (loop == 1)
             {
                 
-                
+                int bitwidth = 16;
                 /* Store the current position and gradient vectors. */
                 veccpy(xp, x, n);
                 veccpy(gp, g, n);
@@ -1216,8 +1220,8 @@ namespace lbfgs
 
                 /* Search for an optimal step. */
                 ls = line_search_morethuente(n, x, &fx, g, d, &step, xp, gp, &step_min, &step_max, &cd, &param);
-                x = quantize_fix(x, n, x_scale, 16);
-                g = quantize_fix(g, n, g_scale, 16);
+                x = quantize_fix(x, n, x_scale, bitwidth);
+                g = quantize_fix(g, n, g_scale, bitwidth);
                 x_scale = get_scale(x,n);
                 g_scale = get_scale(g,n);
 
@@ -1235,8 +1239,8 @@ namespace lbfgs
                 vec2norm(&xnorm, x, n);
                 vec2norm(&gnorm, g, n);
 
-                xnorm = quantize_fix(xnorm, xnorm_scale, 16);
-                gnorm = quantize_fix(gnorm, gnorm_scale, 16);
+                xnorm = quantize_fix(xnorm, xnorm_scale, bitwidth);
+                gnorm = quantize_fix(gnorm, gnorm_scale, bitwidth);
                 xnorm_scale = get_scale(xnorm);
                 gnorm_scale = get_scale(gnorm);
 
@@ -1306,8 +1310,8 @@ namespace lbfgs
                 vecdiff(it->y, g, gp, n);
                 
                 // quant change.1
-                it->s = quantize_fix(it->s, n, it->s_scale, 16);
-                it->y = quantize_fix(it->y, n, it->y_scale, 16);
+                it->s = quantize_fix(it->s, n, it->s_scale, bitwidth);
+                it->y = quantize_fix(it->y, n, it->y_scale, bitwidth);
                 //
                 it->s_scale = get_scale(it->s, n);
                 it->y_scale = get_scale(it->y, n);
@@ -1321,8 +1325,8 @@ namespace lbfgs
                 vecdot(&yy, it->y, it->y, n);
                 it->ys = ys;
 
-                yy = quantize_fix(yy, it->yy_scale, 16);
-                it->ys = quantize_fix(ys, it->ys_scale, 16);
+                yy = quantize_fix(yy, it->yy_scale, bitwidth);
+                it->ys = quantize_fix(ys, it->ys_scale, bitwidth);
                 it->ys_scale = get_scale(ys);
                 it->yy_scale = get_scale(yy);
                 
@@ -1336,61 +1340,80 @@ namespace lbfgs
                 */
                 bound = (m <= k) ? m : k;
                 ++k;
+                before = end;
                 end = (end + 1) % m;
 
                 /* Compute the negative of gradients. */
                 vecncpy(d, g, n);
-
+                int j2;
                 j = end;
+                j2 = before;
+                iteration_data_t *it2 = NULL;
                 for (i = 0; i < bound; ++i)
                 {
                     j = (j + m - 1) % m; /* if (--j == -1) j = m-1; */
+                    j2 = (j2+m-1)%m;
                     it = &lm[j];
+                    it2 = &lm[j2];
+                    // cout <<"J "<<j<<" "<<j2<<" "<<i<<endl;
+
                     /* \alpha_{j} = \rho_{j} s^{t}_{j} \cdot q_{k+1}. */
                     vecdot(&it->alpha, it->s, d, n);
                     // quant change
-                    // it->alpha = quantize_fix(it->alpha, it->alpha_scale*it->ys_scale, 16);
+                    it->alpha = quantize_fix(it->alpha, it2->alpha_scale*it->ys_scale, 16);
                     //
                     it->alpha /= it->ys;
                     // quant change
-                    // it->alpha = quantize_fix(it->alpha, it->alpha_scale, 16);
-                    // it->alpha_scale = get_scale(it->alpha);
+                    it->alpha = quantize_fix(it->alpha, it2->alpha_scale, bitwidth);
+                    it->alpha_scale = get_scale(it->alpha);
                     //
 
                     /* q_{i} = q_{i+1} - \alpha_{i} y_{i}. */
                     vecadd(d, it->y, -it->alpha, n);
                     // quant change
-                    // d = quantize_fix(d, n, d_scale, 16);
+                    // cout << "d "<< d[0] <<" "<< d_scale<<endl;
+                    d = quantize_fix(d, n, it2->d_temp_scale, bitwidth);
+                    it->d_temp_scale = get_scale(d, n);
                     //
                 }
                 double ys_yy = ys/yy;
-                // ys_yy = quantize_fix(ys_yy, it->ys_scale/it->yy_scale, 16);
+                ys_yy = quantize_fix(ys_yy, ys_yy_scale, bitwidth);
+                ys_yy_scale = get_scale(ys_yy);
+
                 vecscale(d, ys / yy, n);
-                // d = quantize_fix(d, n, d_scale, 16);
+                d = quantize_fix(d, n, d_scale, bitwidth);
+                double temp = it2->d_temp2_scale;
                 for (i = 0; i < bound; ++i)
                 {
                     it = &lm[j];
+                    it2 = &lm[j2];
+                    // cout <<"J "<<j<<" "<<j2<<" "<<i<<endl;
                     /* \beta_{j} = \rho_{j} y^t_{j} \cdot \gamm_{i}. */
                     vecdot(&beta, it->y, d, n);
                     // quant change
-                    // beta = quantize_fix(beta, it->beta_scale*it->ys_scale, 16);
+                    beta = quantize_fix(beta, it2->beta_scale*it->ys_scale, bitwidth);
                     //
                     beta /= it->ys;
                     // quant change
-                    // beta = quantize_fix(beta, it->beta_scale, 16);
-                    // it->beta_scale = get_scale(beta);
+                    beta = quantize_fix(beta, it2->beta_scale, bitwidth);
+                    it->beta_scale = get_scale(beta);
                     //
                     double a_b = it->alpha - beta;
-                    // a_b = quantize_fix(a_b, it->a_b_scale, 16);
-                    // it->a_b_scale = get_scale(a_b);
+                    a_b = quantize_fix(a_b, it2->a_b_scale, bitwidth);
+                    it->a_b_scale = get_scale(a_b);
                     /* \gamm_{i+1} = \gamm_{i} + (\alpha_{j} - \beta_{j}) s_{j}. */
                     vecadd(d, it->s, a_b, n);
                     // quant change
-                    // d = quantize_fix(d, n, d_scale, 16);
+                    cout <<"be "<< d[0] <<endl;
+                    d = quantize_fix(d, n, it->d_temp2_scale*8, bitwidth);
+                    cout <<"af "<< d[0] <<endl;
+                    // it->d_temp2_scale = temp;
+                    it->d_temp2_scale = get_scale(d, n);
                     //
                     j = (j + 1) % m; /* if (++j == m) j = 0; */
+                    j2 = (j2+1)%m;
                 }
-                
+                // it2->d_temp2_scale = temp;
                 d_scale = get_scale(d,n);
                 /*
                 Now the search direction d is ready. We try step = 1 first.

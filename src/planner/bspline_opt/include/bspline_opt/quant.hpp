@@ -55,7 +55,7 @@ inline double quantize_fix(double input, double scale, int bitwidth){
     double result;
     
     input = input / scale;
-    int bitpoint = bitwidth - 2;
+    int bitpoint = bitwidth - 3;
     input = input * pow(2.0, bitpoint);
     input = floor(input + 0.5);
     // input = std::clamp(input, -pow(2.0, bitwidth-1), pow(2.0, bitwidth-1)-1);
