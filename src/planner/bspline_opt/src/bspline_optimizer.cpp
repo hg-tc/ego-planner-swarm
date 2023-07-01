@@ -1690,10 +1690,10 @@ namespace ego_planner
 
     calcSmoothnessCost(cps_.points, f_smoothness, g_smoothness);
     calcDistanceCostRebound(cps_.points, f_distance, g_distance, iter_num_, f_smoothness);
-    calcFeasibilityCost(cps_.points, f_feasibility, g_feasibility);
+    // calcFeasibilityCost(cps_.points, f_feasibility, g_feasibility);
     // calcMovingObjCost(cps_.points, f_mov_objs, g_mov_objs);
     calcSwarmCost(cps_.points, f_swarm, g_swarm);
-    calcTerminalCost(cps_.points, f_terminal, g_terminal);
+    // calcTerminalCost(cps_.points, f_terminal, g_terminal);
 
     f_combine = lambda1_ * f_smoothness + new_lambda2_ * f_distance + lambda3_ * f_feasibility + new_lambda2_ * f_swarm + lambda2_ * f_terminal;
     //f_combine = lambda1_ * f_smoothness + new_lambda2_ * f_distance + lambda3_ * f_feasibility + new_lambda2_ * f_mov_objs;

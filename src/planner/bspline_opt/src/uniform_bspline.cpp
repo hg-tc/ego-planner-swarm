@@ -60,7 +60,7 @@ namespace ego_planner
 
   Eigen::VectorXd UniformBspline::evaluateDeBoor(const double &u)
   {
-
+    // cout <<"U_ "<< p_ <<" "<<u<<endl;
     double ub = min(max(u_(p_), u), u_(m_ - p_));
 
     // determine which [ui,ui+1] lay in

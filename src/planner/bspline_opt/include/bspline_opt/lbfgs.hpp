@@ -1404,9 +1404,9 @@ namespace lbfgs
                     /* \gamm_{i+1} = \gamm_{i} + (\alpha_{j} - \beta_{j}) s_{j}. */
                     vecadd(d, it->s, a_b, n);
                     // quant change
-                    cout <<"be "<< d[0] <<endl;
+                    // cout <<"be "<< d[0] <<endl;
                     d = quantize_fix(d, n, it->d_temp2_scale*8, bitwidth);
-                    cout <<"af "<< d[0] <<endl;
+                    // cout <<"af "<< d[0] <<endl;
                     // it->d_temp2_scale = temp;
                     it->d_temp2_scale = get_scale(d, n);
                     //
