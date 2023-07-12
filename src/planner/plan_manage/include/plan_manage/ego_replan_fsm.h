@@ -113,6 +113,7 @@ namespace ego_planner
     void publishSwarmTrajs(bool startup_pub);
 
   public:
+    void printtimeinfo();
     EGOReplanFSM(/* args */)
     {
     }

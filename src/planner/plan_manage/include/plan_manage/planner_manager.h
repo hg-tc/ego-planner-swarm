@@ -46,6 +46,7 @@ namespace ego_planner
 
     bool checkCollision(int drone_id);
     
+    void printtimeinfo();
 
     PlanParameters pp_;
     LocalTrajData local_data_;
@@ -76,6 +77,7 @@ namespace ego_planner
     // SECTION developing
 
   public:
+    
     typedef unique_ptr<EGOPlannerManager> Ptr;
 
     // !SECTION

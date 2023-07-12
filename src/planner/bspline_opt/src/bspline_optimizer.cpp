@@ -1487,6 +1487,8 @@ namespace ego_planner
           initControlPoints(cps_.points, false);
           new_lambda2_ *= 2;
 
+          
+          
           printf("\033[32miter(+1)=%d,time(ms)=%5.3f, swarm too close, keep optimizing\n\033[0m", iter_num_, time_ms);
 
           continue;
@@ -1568,6 +1570,10 @@ namespace ego_planner
 
         if (!flag_occ)
         {
+          ave_time = (ave_time * count_num + time_ms) / (count_num + 1);
+          ave_iter = (ave_iter * count_num + iter_num_) / (count_num + 1);
+          count_num += 1;
+          printf("\033[32mave_time=%5.3f, ave_iter=%5.3f\n\033[0m", ave_time, ave_iter);
           printf("\033[32miter(+1)=%d,time(ms)=%5.3f,total_t(ms)=%5.3f,cost=%5.3f\n\033[0m", iter_num_, time_ms, total_time_ms, final_cost);
           success = true;
         }

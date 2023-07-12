@@ -1201,8 +1201,7 @@ namespace lbfgs
             gnorm_scale = g_scale * 64;
             while (loop == 1)
             {
-                
-                int bitwidth = 16;
+                int bitwidth = 8;
                 /* Store the current position and gradient vectors. */
                 veccpy(xp, x, n);
                 veccpy(gp, g, n);
@@ -1360,7 +1359,7 @@ namespace lbfgs
                     /* \alpha_{j} = \rho_{j} s^{t}_{j} \cdot q_{k+1}. */
                     vecdot(&it->alpha, it->s, d, n);
                     // quant change
-                    it->alpha = quantize_fix(it->alpha, it2->alpha_scale*it->ys_scale, 16);
+                    it->alpha = quantize_fix(it->alpha, it2->alpha_scale*it->ys_scale, bitwidth);
                     //
                     it->alpha /= it->ys;
                     // quant change

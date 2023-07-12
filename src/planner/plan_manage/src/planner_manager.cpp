@@ -570,5 +570,8 @@ namespace ego_planner
     }
     UniformBspline::parameterizeToBspline(dt, point_set, start_end_derivative, ctrl_pts);
   }
+  void EGOPlannerManager::printtimeinfo(){
+      bspline_optimizer_->printtimeinfo(pp_.drone_id);
+    }
 
 } // namespace ego_planner

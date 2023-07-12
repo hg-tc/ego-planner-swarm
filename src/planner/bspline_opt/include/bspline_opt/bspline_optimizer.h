@@ -9,6 +9,8 @@
 #include <ros/ros.h>
 #include "bspline_opt/lbfgs.hpp"
 #include <traj_utils/plan_container.hpp>
+#include <iostream>
+#include <fstream>
 
 // Gradient and elasitc band optimization
 
@@ -126,6 +128,28 @@ namespace ego_planner
     inline int getOrder(void) { return order_; }
     inline double getSwarmClearance(void) { return swarm_clearance_; }
 
+    bool outed = false;
+    inline void printtimeinfo(int id){
+      
+
+      if(ave_time != 0 && !outed){
+        printf("\033[32mdron_id=%d, ave_time=%5.3f, ave_iter=%5.3f, count_num = %d\n\033[0m", id, ave_time, ave_iter, count_num);
+        outed = true;
+
+        
+        ofstream outfile;
+        outfile.open("/home/zsq/ave_out.txt",ios::app);
+        if(!outfile){
+                cout<<"error"<<endl;
+        }
+        outfile<<id<<" "<<ave_time<<" "<<ave_iter<<" "<<count_num<<endl;
+        outfile.close();
+
+      }
+      // outfile.close();
+      
+    }
+
   private:
     GridMap::Ptr grid_map_;
     fast_planner::ObjPredictor::Ptr moving_objs_;
@@ -171,6 +195,10 @@ namespace ego_planner
     double min_cost_;               //
 
     Eigen::Vector3d local_target_pt_; 
+
+    int count_num=0;
+    double ave_time=0;
+    double ave_iter=0;
 
 #define INIT_min_ellip_dist_ 123456789.0123456789
     double min_ellip_dist_;

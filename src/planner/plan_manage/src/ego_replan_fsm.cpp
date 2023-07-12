@@ -459,6 +459,7 @@ namespace ego_planner
 
     case WAIT_TARGET:
     {
+      printtimeinfo();
       if (!have_target_ || !have_trigger_)
         goto force_return;
       // return;
@@ -890,7 +891,9 @@ namespace ego_planner
 
     return true;
   }
-
+  void EGOReplanFSM::printtimeinfo(){
+      planner_manager_->printtimeinfo();
+    }
   void EGOReplanFSM::getLocalTarget()
   {
     double t;
