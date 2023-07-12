@@ -1201,7 +1201,7 @@ namespace lbfgs
             gnorm_scale = g_scale * 64;
             while (loop == 1)
             {
-                int bitwidth = 8;
+                int bitwidth = 16;
                 /* Store the current position and gradient vectors. */
                 veccpy(xp, x, n);
                 veccpy(gp, g, n);
@@ -1238,10 +1238,10 @@ namespace lbfgs
                 vec2norm(&xnorm, x, n);
                 vec2norm(&gnorm, g, n);
 
-                xnorm = quantize_fix(xnorm, xnorm_scale, bitwidth);
-                gnorm = quantize_fix(gnorm, gnorm_scale, bitwidth);
-                xnorm_scale = get_scale(xnorm);
-                gnorm_scale = get_scale(gnorm);
+                // xnorm = quantize_fix(xnorm, xnorm_scale, bitwidth);
+                // gnorm = quantize_fix(gnorm, gnorm_scale, bitwidth);
+                // xnorm_scale = get_scale(xnorm);
+                // gnorm_scale = get_scale(gnorm);
 
                 // /* Report the progress. */
                 // if (cd.proc_progress)
