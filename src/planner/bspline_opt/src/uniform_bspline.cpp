@@ -61,7 +61,7 @@ namespace ego_planner
   Eigen::VectorXd UniformBspline::evaluateDeBoor(const double &u)
   {
     // cout <<"U_ "<< p_ <<" "<<u<<endl;
-    double ub = min(max(u_(p_), u), u_(m_ - p_));
+    double ub = min(max(u_(p_), u), u_(m_ - p_));//guijifanwienei  #
 
     // determine which [ui,ui+1] lay in
     int k = p_;
@@ -70,7 +70,7 @@ namespace ego_planner
       if (u_(k + 1) >= ub)
         break;
       ++k;
-    }
+    }//qiu k only less than t
 
     /* deBoor's alg */
     vector<Eigen::VectorXd> d;
@@ -79,7 +79,13 @@ namespace ego_planner
       d.push_back(control_points_.col(k - p_ + i));
       // cout << d[i].transpose() << endl;
     }
-
+    //========================
+    // for (int i = 0; i < p_; ++i)
+    // {
+    //   // cout<<"d: "<< d[0]<<","<< d[1]<<endl;
+    //   // cout << d[i].transpose() << endl;
+    // }
+    //========================
     for (int r = 1; r <= p_; ++r)
     {
       for (int i = p_; i >= r; --i)
@@ -89,7 +95,6 @@ namespace ego_planner
         d[i] = (1 - alpha) * d[i - 1] + alpha * d[i];
       }
     }
-
     return d[p_];
   }
 

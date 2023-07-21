@@ -1359,11 +1359,14 @@ namespace lbfgs
                     /* \alpha_{j} = \rho_{j} s^{t}_{j} \cdot q_{k+1}. */
                     vecdot(&it->alpha, it->s, d, n);
                     // quant change
-                    it->alpha = quantize_fix(it->alpha, it2->alpha_scale*it->ys_scale, bitwidth);
+                    if(i == 0){
+                        it->alpha = quantize_fix(it->alpha, it2->alpha_scale*it->ys_scale, bitwidth);
+                    }
+                    it->alpha = quantize_fix(it->alpha, it->alpha_scale*it->ys_scale, bitwidth);
                     //
                     it->alpha /= it->ys;
                     // quant change
-                    it->alpha = quantize_fix(it->alpha, it2->alpha_scale, bitwidth);
+                    it->alpha = quantize_fix(it->alpha, it->alpha_scale, bitwidth);
                     it->alpha_scale = get_scale(it->alpha);
                     //
 

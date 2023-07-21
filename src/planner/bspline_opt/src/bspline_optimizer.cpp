@@ -776,6 +776,7 @@ namespace ego_planner
   void BsplineOptimizer::calcSwarmCost(const Eigen::MatrixXd &q, double &cost, Eigen::MatrixXd &gradient)
   {
     cost = 0.0;
+    // cout << "===============================start:======================================"<<endl;
     int end_idx = q.cols() - order_ - (double)(q.cols() - 2 * order_) * 1.0 / 3.0; // Only check the first 2/3 points
     const double CLEARANCE = swarm_clearance_ * 2;
     double t_now = ros::Time::now().toSec();
@@ -784,15 +785,23 @@ namespace ego_planner
     for (int i = order_; i < end_idx; i++)
     {
       double glb_time = t_now + ((double)(order_ - 1) / 2 + (i - order_ + 1)) * bspline_interval_;
+      // cout << "===============================i:=="<< i <<endl;
+      
 
       for (size_t id = 0; id < swarm_trajs_->size(); id++)
       {
+        // cout << "id:" << id << endl;
+        // cout << "swarm_trajs_->at(id).drone_id:" << swarm_trajs_->at(id).drone_id << endl;
+        // cout << "drone_id_:" << drone_id_ << endl;
         if ((swarm_trajs_->at(id).drone_id != (int)id) || swarm_trajs_->at(id).drone_id == drone_id_)
         {
           continue;
         }
 
         double traj_i_satrt_time = swarm_trajs_->at(id).start_time_.toSec();
+        
+        // cout << "t_now:" << t_now-traj_i_satrt_time << endl;
+        // cout << "id:" << id << endl;
         if (glb_time < traj_i_satrt_time + swarm_trajs_->at(id).duration_ - 0.1)
         {
           /* def cost=(c-sqrt([Q-O]'D[Q-O]))^2, D=[1/b^2,0,0;0,1/b^2,0;0,0,1/a^2] */
